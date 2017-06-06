@@ -49,7 +49,7 @@ type Metric struct {
 
 // DataPoint graphite metric data
 type DataPoint struct {
-	Value     float64
+	Value     *float64
 	TimeStamp JSONTime
 }
 
