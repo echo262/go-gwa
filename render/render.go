@@ -79,6 +79,14 @@ func (m *MetricRequest) Encode() string {
 	return v.Encode()
 }
 
+// LastDatapoint fetch last datapoint
+func (m *Metric) LastDatapoint() *DataPoint {
+	if len(m.DataPoints) == 0 {
+		return nil
+	}
+	return &m.DataPoints[len(m.DataPoints)-1]
+}
+
 // UnmarshalJSON Implement unmarshaler interface useful for timestamp unmarshal
 func (t *JSONTime) UnmarshalJSON(buf []byte) error {
 	var err error
@@ -175,4 +183,28 @@ func (c *Client) Fetch(ctx context.Context, mr *MetricRequest) (*Metrics, error)
 	}
 
 	return m, nil
+}
+
+// FetchCurrent helper function that fetch current metric value
+func (c *Client) FetchCurrent(ctx context.Context, metric string) (*float64, error) {
+	// Construct target name
+	target := fmt.Sprintf("keepLastValue(summarize(%s,\"1min\",\"last\"),5)", metric)
+
+	request := &MetricRequest{
+		From:   "-20min",
+		Target: []string{target},
+	}
+
+	responce, err := c.Fetch(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(*responce) == 0 {
+		return nil, fmt.Errorf("Nothing fetched")
+	}
+
+	m := (*responce)[0]
+	data := m.LastDatapoint()
+	return data.Value, nil
 }
